@@ -1,0 +1,12 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/offline.png</file>
+        <file>images/offline-big.png</file>
+        <file>images/online.png</file>
+        <file>images/online-big.png</file>
+        <file>fonts/NotoSans-Regular.ttf</file>
+        <file>images/logo.png</file>
+        <file>images/bg.png</file>
+        <file>images/loading.gif</file>
+    </qresource>
+</RCC>
