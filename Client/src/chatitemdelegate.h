@@ -19,6 +19,7 @@ private:
     int mPadding;
     QFont mNameFont;
     QFont mMessageFont;
+    QFont mTimeFont;
 };
 
 #endif // CHATITEMDELEGATE_H

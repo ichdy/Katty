@@ -1,5 +1,6 @@
 #include "chatitemdelegate.h"
 
+#include <QDateTime>
 #include <QFontMetrics>
 #include <QPainter>
 #include <QListView>
@@ -22,6 +23,8 @@ ChatItemDelegate::ChatItemDelegate(QObject *parent) :
 
     mMessageFont.setFamily("Noto Sans");
     mMessageFont.setPixelSize(12);
+
+    mTimeFont.setPixelSize(9);
 }
 
 void ChatItemDelegate::setMessageFontPixelSize(int size)
@@ -33,9 +36,13 @@ QSize ChatItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
 {
     QString name = index.data(ChatItemNameRole).toString();
     QString msg = index.data(Qt::DisplayRole).toString();
+    QDateTime time = index.data(ChatItemTimeRole).toDateTime();
 
     QListView *view = static_cast<QListView *>(option.styleObject);
     QScrollBar *verticalScrollBar = view->verticalScrollBar();
+
+    int type = index.data(ChatItemTypeRole).toInt();
+    int width = view->width() - (verticalScrollBar->isVisible()? verticalScrollBar->width() : 0) - 4;
 
     bool drawName(true);
     if (index.row() > 0) {
@@ -43,17 +50,20 @@ QSize ChatItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
         drawName = (prevIndex.data(ChatItemNameRole).toString() != name);
     }
 
-    int type = index.data(ChatItemTypeRole).toInt();
-    int width = view->width() - (verticalScrollBar->isVisible()? verticalScrollBar->width() : 0) - 4;
-
     int nameFlags = Qt::TextSingleLine | Qt::AlignVCenter | (type == ChatItemMe? Qt::AlignRight : Qt::AlignLeft);
     int availNameWidth = width - (mMarginX * 2);
 
     QFontMetrics nameFm(mNameFont);
     QRect nameRect = nameFm.boundingRect(0, 0, availNameWidth, 0, nameFlags, name);
 
-    int availMsgWidth = (width - (mMarginX * 2)) * 0.85 - (mPadding * 2);
+    int timeFlags = Qt::TextSingleLine | Qt::AlignCenter;
+    int availTimeWidth = width - (mMarginX * 2);
+
+    QFontMetrics timeFm(mTimeFont);
+    QRect timeRect = timeFm.boundingRect(0, 0, availTimeWidth, 0, timeFlags, time.toString("HH:mm"));
+
     int msgFlags = Qt::TextWordWrap | Qt::AlignVCenter | (type == ChatItemMe? Qt::AlignRight : Qt::AlignLeft);
+    int availMsgWidth = (width - (mMarginX * 2)) * 0.85 - (timeRect.width() + (mPadding * 3));
 
     QFontMetrics msgFm(mMessageFont);
     QRect msgRect = msgFm.boundingRect(0, 0, availMsgWidth, 0, msgFlags, msg);
@@ -65,6 +75,7 @@ void ChatItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 {
     QString name = index.data(ChatItemNameRole).toString();
     QString msg = index.data(Qt::DisplayRole).toString();
+    QDateTime time = index.data(ChatItemTimeRole).toDateTime();
 
     QListView *view = static_cast<QListView *>(option.styleObject);
 
@@ -104,29 +115,42 @@ void ChatItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         painter->restore();
     }
 
-    int availMsgWidth = width * 0.85 - (mPadding * 2);
+    int timeFlags = Qt::TextSingleLine | Qt::AlignCenter;
+    int availTimeWidth = width - (mMarginX * 2);
+
+    QFontMetrics timeFm(mTimeFont);
+    QRect timeRect = timeFm.boundingRect(0, 0, availTimeWidth, 0, timeFlags, time.toString("HH:mm"));
+
+    int availMsgWidth = width * 0.85 - (timeRect.width() + mPadding * 3);
     int msgFlags = Qt::TextWordWrap | Qt::AlignVCenter | (type == ChatItemMe? Qt::AlignRight : Qt::AlignLeft);
 
     QFontMetrics msgFm(mMessageFont);
-    QRect msgRet = msgFm.boundingRect(0, 0, availMsgWidth, 0, msgFlags, msg);
+    QRect msgRec = msgFm.boundingRect(0, 0, availMsgWidth, 0, msgFlags, msg);
 
-    int bubbleWidth = msgRet.width() + (mPadding * 2);
-    int bubbleHeight = msgRet.height() + (mPadding * 2);
+    int bubbleWidth = msgRec.width() + timeRect.width() + (mPadding * 3);
+    int bubbleHeight = msgRec.height() + (mPadding * 2);
     int bubbleX = x + (type == ChatItemMe? (width - bubbleWidth) : 0);
     int bubbleY = y + nameRect.height();
 
-    QColor bubbleColor(type == ChatItemMe? QColor("#27ABFF") : QColor("#EFEFEF"));
-    QColor msgColor(type == ChatItemMe? QColor("#FFF") : QColor("#222"));
+    QColor bubbleColor(type == ChatItemMe? QColor("#DCF8C6") : QColor("#EFEFEF"));
+    QColor msgColor(QColor("#111"));
+    QColor timeColor(QColor("#888"));
 
     painter->save();
     painter->setBrush(bubbleColor);
-    painter->setPen(Qt::transparent);
+    painter->setPen(QColor("#DDD"));
     painter->drawRoundedRect(bubbleX, bubbleY, bubbleWidth, bubbleHeight, 5, 5);
     painter->restore();
 
     painter->save();
     painter->setFont(mMessageFont);
     painter->setPen(msgColor);
-    painter->drawText(bubbleX + mPadding, bubbleY + mPadding, msgRet.width(), msgRet.height(), msgFlags, msg);
+    painter->drawText(bubbleX + mPadding, bubbleY + mPadding, msgRec.width(), msgRec.height(), msgFlags, msg);
+    painter->restore();
+
+    painter->save();
+    painter->setFont(mTimeFont);
+    painter->setPen(timeColor);
+    painter->drawText(bubbleX + msgRec.width() + mPadding * 2, bubbleY + bubbleHeight - timeRect.height() - mPadding, timeRect.width(), timeRect.height(), timeFlags, time.toString("HH:mm"));
     painter->restore();
 }

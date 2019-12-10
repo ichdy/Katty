@@ -30,7 +30,7 @@ private slots:
 
 private:
     explicit ChatWidget(const QString &username, QWidget *parent = 0);
-    void appendMessage(ChatItemType type, const QString &message);
+    void appendMessage(ChatItemType type, const QString &message, const QDateTime &time);
 
     ChatView *mChatView;
     ChatItemDelegate *mChatDelegate;

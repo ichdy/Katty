@@ -124,12 +124,13 @@ void ChatWidget::closeChatWidgets()
     }
 }
 
-void ChatWidget::appendMessage(ChatItemType type, const QString &message)
+void ChatWidget::appendMessage(ChatItemType type, const QString &message, const QDateTime &time)
 {
     QStandardItem *item = new QStandardItem;
     item->setData(type, ChatItemTypeRole);
     item->setData(SharedData::userMap()[type == ChatItemMe? SharedData::username() : mUsername].nama, ChatItemNameRole);
     item->setData(message, Qt::DisplayRole);
+    item->setData(time, ChatItemTimeRole);
 
     QStandardItemModel *model = static_cast<QStandardItemModel *>(mChatView->model());
     model->appendRow(item);
@@ -200,9 +201,10 @@ void ChatWidget::onEngineGotData(const QVariantMap &data)
         QString from = data["from"].toString();
         QString to = data["to"].toString();
         QString message = data["message"].toString();
+        QDateTime time = data["time"].toDateTime();
 
         if (from == SharedData::username() && to == mUsername) {
-            appendMessage(ChatItemMe, message);
+            appendMessage(ChatItemMe, message, time);
 
             if (from == to) {
                 QVariantMap respond;
@@ -214,7 +216,7 @@ void ChatWidget::onEngineGotData(const QVariantMap &data)
             }
         }
         else if (from == mUsername && to == SharedData::username()) {
-            appendMessage(ChatItemYou, message);
+            appendMessage(ChatItemYou, message, time);
 
             QVariantMap respond;
             respond["type"] = MessagePrivateChat;
@@ -233,11 +235,12 @@ void ChatWidget::onEngineGotData(const QVariantMap &data)
             QString from = chatMap["from"].toString();
             QString to = chatMap["to"].toString();
             QString message = chatMap["message"].toString();
+            QDateTime time = chatMap["time"].toDateTime();
 
             if (from == SharedData::username() && to == mUsername)
-                appendMessage(ChatItemMe, message);
+                appendMessage(ChatItemMe, message, time);
             else if (from == mUsername && to == SharedData::username())
-                appendMessage(ChatItemYou, message);
+                appendMessage(ChatItemYou, message, time);
         }
 
         mRequestHistory = false;
@@ -251,8 +254,9 @@ void ChatWidget::onEngineGotData(const QVariantMap &data)
         foreach (const QVariant &chat, data["chatList"].toList()) {
             QVariantMap chatMap = chat.toMap();
             QString message = chatMap["message"].toString();
+            QDateTime time = chatMap["time"].toDateTime();
 
-            appendMessage(ChatItemYou, message);
+            appendMessage(ChatItemYou, message, time);
 
             QVariantMap respond;
             respond["type"] = MessagePrivateChat;
