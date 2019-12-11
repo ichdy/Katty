@@ -11,6 +11,7 @@ enum MessageType {
     MessageDataList,
     MessageStatus,
     MessagePrivateChat,
+    MessagePrivateChatStatus,
     MessagePrivateSendFile,
     MessagePrivateHistory,
     MessagePrivatePending,
