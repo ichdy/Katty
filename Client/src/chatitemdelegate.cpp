@@ -144,7 +144,7 @@ void ChatItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         QRect timeRect = timeFm.boundingRect(0, 0, availTimeWidth, 0, timeFlags, time.toString("HH:mm"));
 
         int availMsgWidth = width * 0.85 - (timeRect.width() + mPadding * 3);
-        int msgFlags = Qt::TextWordWrap | Qt::AlignVCenter | (type == ChatItemMe? Qt::AlignRight : Qt::AlignLeft);
+        int msgFlags = Qt::TextWordWrap | Qt::AlignVCenter | Qt::AlignLeft;
 
         QFontMetrics msgFm(mMessageFont);
         QRect msgRec = msgFm.boundingRect(0, 0, availMsgWidth, 0, msgFlags, msg);
