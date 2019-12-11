@@ -14,18 +14,18 @@ struct UserData {
 class SharedData
 {
 public:
-    SharedData();
+    static SharedData &instance() {
+        static SharedData data;
+        return data;
+    }
 
-    static QString &username();
-    static QMap<int, QString> &seksiMap();
-    static QMap<int, QString> &jabatanMap();
-    static QMap<QString, UserData> &userMap();
+    QString username;
+    QMap<int, QString> seksiMap;
+    QMap<int, QString> jabatanMap;
+    QMap<QString, UserData> userMap;
 
 private:
-    static QString mUsername;
-    static QMap<int, QString> mSeksiMap;
-    static QMap<int, QString> mJabatanMap;
-    static QMap<QString, UserData> mUserMap;
+    SharedData() {}
 };
 
 #endif // SHAREDDATA_H

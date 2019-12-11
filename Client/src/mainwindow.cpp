@@ -82,13 +82,13 @@ void MainWindow::onEngineGotData(const QVariantMap &data)
 
             mStack->setCurrentWidget(mMainPage);
             mMainPage->loadData();
-            SharedData::username() = username;
+            SharedData::instance().username = username;
         }
     }
     else if (type == MessageLogout) {
         bool result = data["result"].toBool();
         if (result) {
-            SharedData::username().clear();
+            SharedData::instance().username.clear();
             mStack->setCurrentWidget(mLoginPage);
             ChatWidget::closeChatWidgets();
         }

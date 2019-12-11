@@ -51,7 +51,8 @@ enum ChatItemRole {
 enum ChatItemType {
     ChatItemUnknown = 0,
     ChatItemMe,
-    ChatItemYou
+    ChatItemYou,
+    ChatItemDate
 };
 
 #endif

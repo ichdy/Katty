@@ -17,6 +17,7 @@ public:
 private:
     int mMarginX, mMarginY;
     int mPadding;
+    QFont mDateFont;
     QFont mNameFont;
     QFont mMessageFont;
     QFont mTimeFont;

@@ -81,8 +81,9 @@ ChatWidget::ChatWidget(const QString &username, QWidget *parent) :
     layout->addWidget(splitter);
     layout->setMargin(3);
 
-    mNama = SharedData::userMap()[mUsername].nama;
-    SharedData::userMap()[mUsername].online? mOfflineLabel->hide() : mOfflineLabel->show();
+    SharedData &sharedData = SharedData::instance();
+    mNama = sharedData.userMap[mUsername].nama;
+    sharedData.userMap[mUsername].online? mOfflineLabel->hide() : mOfflineLabel->show();
 
     setLayout(layout);
     setWindowTitle("Chat with " + mNama);
@@ -126,13 +127,35 @@ void ChatWidget::closeChatWidgets()
 
 void ChatWidget::appendMessage(ChatItemType type, const QString &message, const QDateTime &time)
 {
+    QStandardItemModel *model = static_cast<QStandardItemModel *>(mChatView->model());
+
+    QDate messageDate = time.date();
+    QDate lastMessageDate;
+    QStandardItem *lastItem = model->item(model->rowCount() -1, 0);
+    if (lastItem)
+        lastMessageDate = lastItem->data(ChatItemTimeRole).toDateTime().date();
+
+    if (lastMessageDate.isNull() || lastMessageDate != messageDate) {
+        QString dateText;
+        if (messageDate == QDate::currentDate())
+            dateText = "Hari ini";
+        else if (messageDate == QDate::currentDate().addDays(-1))
+            dateText = "Kemarin";
+        else
+            dateText = messageDate.toString("dddd, dd MM yyyy");
+
+        QStandardItem *item = new QStandardItem(dateText);
+        item->setData(ChatItemDate, ChatItemTypeRole);
+        model->appendRow(item);
+    }
+
+    SharedData &sharedData = SharedData::instance();
+
     QStandardItem *item = new QStandardItem;
     item->setData(type, ChatItemTypeRole);
-    item->setData(SharedData::userMap()[type == ChatItemMe? SharedData::username() : mUsername].nama, ChatItemNameRole);
+    item->setData(sharedData.userMap[type == ChatItemMe? sharedData.username : mUsername].nama, ChatItemNameRole);
     item->setData(message, Qt::DisplayRole);
     item->setData(time, ChatItemTimeRole);
-
-    QStandardItemModel *model = static_cast<QStandardItemModel *>(mChatView->model());
     model->appendRow(item);
 
     mChatView->scrollToBottom();
@@ -203,7 +226,8 @@ void ChatWidget::onEngineGotData(const QVariantMap &data)
         QString message = data["message"].toString();
         QDateTime time = data["time"].toDateTime();
 
-        if (from == SharedData::username() && to == mUsername) {
+        SharedData &sharedData = SharedData::instance();
+        if (from == sharedData.username && to == mUsername) {
             appendMessage(ChatItemMe, message, time);
 
             if (from == to) {
@@ -215,7 +239,7 @@ void ChatWidget::onEngineGotData(const QVariantMap &data)
                 Engine::write(respond);
             }
         }
-        else if (from == mUsername && to == SharedData::username()) {
+        else if (from == mUsername && to == sharedData.username) {
             appendMessage(ChatItemYou, message, time);
 
             QVariantMap respond;
@@ -230,6 +254,7 @@ void ChatWidget::onEngineGotData(const QVariantMap &data)
         if (data["to"].toString() != mUsername)
             return;
 
+        SharedData &sharedData = SharedData::instance();
         foreach (const QVariant &chat, data["chatList"].toList()) {
             QVariantMap chatMap = chat.toMap();
             QString from = chatMap["from"].toString();
@@ -237,9 +262,9 @@ void ChatWidget::onEngineGotData(const QVariantMap &data)
             QString message = chatMap["message"].toString();
             QDateTime time = chatMap["time"].toDateTime();
 
-            if (from == SharedData::username() && to == mUsername)
+            if (from == sharedData.username && to == mUsername)
                 appendMessage(ChatItemMe, message, time);
-            else if (from == mUsername && to == SharedData::username())
+            else if (from == mUsername && to == sharedData.username)
                 appendMessage(ChatItemYou, message, time);
         }
 

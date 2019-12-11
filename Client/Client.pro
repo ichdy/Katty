@@ -47,7 +47,6 @@ SOURCES += \
     src/engine.cpp \
     src/loginpage.cpp \
     src/mainpage.cpp \
-    src/shareddata.cpp \
     src/useritemdelegate.cpp \
     src/chatedit.cpp \
     src/chatwidget.cpp \

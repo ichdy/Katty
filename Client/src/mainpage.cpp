@@ -52,11 +52,13 @@ void MainPage::loadData()
 
 void MainPage::refreshUserView()
 {
+    SharedData &sharedData = SharedData::instance();
+
     delete mUserView->model();
     QStandardItemModel *model = new QStandardItemModel(mUserView);
 
     QHash<int, QStandardItem *> seksiItemHash;
-    QMapIterator<int, QString> seksiIterator(SharedData::seksiMap());
+    QMapIterator<int, QString> seksiIterator(sharedData.seksiMap);
     while (seksiIterator.hasNext()) {
         seksiIterator.next();
         int id = seksiIterator.key();
@@ -71,7 +73,7 @@ void MainPage::refreshUserView()
     }
 
     QMap<int, QMap<int, QMap<QString, UserData>>> sortedMap;
-    QMapIterator<QString, UserData> userIterator(SharedData::userMap());
+    QMapIterator<QString, UserData> userIterator(sharedData.userMap);
     while (userIterator.hasNext()) {
         userIterator.next();
         const UserData &userData = userIterator.value();
@@ -103,7 +105,7 @@ void MainPage::refreshUserView()
                 item->setData(nama, Qt::DisplayRole);
                 item->setData(UserItemUser, UserItemTypeRole);
                 item->setData(namaIterator.value().username, UserItemUsernameRole);
-                item->setData(SharedData::jabatanMap()[jabatan], UserItemJabatanRole);
+                item->setData(sharedData.jabatanMap[jabatan], UserItemJabatanRole);
                 item->setData(namaIterator.value().online, UserItemOnlineRole);
 
                 if (seksiItemHash[seksi])
@@ -122,31 +124,33 @@ void MainPage::onEngineGotData(const QVariantMap &data)
 {
     int type = data["type"].toInt();
     if (type == MessageDataList) {
+        SharedData &sharedData = SharedData::instance();
+
         QVariantList seksiList = data["seksiList"].toList();
         QVariantList jabatanList = data["jabatanList"].toList();
         QVariantList userList = data["userList"].toList();
         QVariantList chatList = data["chatList"].toList();
 
-        SharedData::seksiMap().clear();
+        sharedData.seksiMap.clear();
         foreach (const QVariant &seksi, seksiList) {
             QVariantMap seksiMap = seksi.toMap();
             int id = seksiMap["id"].toInt();
             QString name = seksiMap["nama"].toString();
-            SharedData::seksiMap()[id] = name;
+            sharedData.seksiMap[id] = name;
         }
 
-        SharedData::jabatanMap().clear();
+        sharedData.jabatanMap.clear();
         foreach (const QVariant &jabatan, jabatanList) {
             QVariantMap jabatanMap = jabatan.toMap();
             int id = jabatanMap["id"].toInt();
             QString name = jabatanMap["nama"].toString();
-            SharedData::jabatanMap()[id] = name;
+            sharedData.jabatanMap[id] = name;
         }
 
-        SharedData::userMap().clear();
+        sharedData.userMap.clear();
         foreach (const QVariant &user, userList) {
             QVariantMap userMap = user.toMap();
-            UserData &userData = SharedData::userMap()[userMap["nip"].toString()];
+            UserData &userData = sharedData.userMap[userMap["nip"].toString()];
             userData.username = userMap["nip"].toString();
             userData.nama = userMap["nama"].toString();
             userData.seksi = userMap["seksi"].toInt();
@@ -171,7 +175,7 @@ void MainPage::onEngineGotData(const QVariantMap &data)
         bool online = data["online"].toBool();
 
         if (mUserItemHash.contains(username)) {
-            SharedData::userMap()[username].online = online;
+            SharedData::instance().userMap[username].online = online;
             mUserItemHash[username]->setData(online, UserItemOnlineRole);
         }
     }
@@ -180,10 +184,10 @@ void MainPage::onEngineGotData(const QVariantMap &data)
         QString to = data["to"].toString();
 
         QString username;
-        if (from == SharedData::username())
+        if (from == SharedData::instance().username)
             username = to;
 
-        if (to == SharedData::username())
+        if (to == SharedData::instance().username)
             username = from;
 
         ChatWidget *chatWidget = ChatWidget::getChatWidget(username);
