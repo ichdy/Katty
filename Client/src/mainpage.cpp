@@ -50,6 +50,13 @@ void MainPage::loadData()
     Engine::write(request);
 }
 
+void MainPage::loadPendingChat()
+{
+    QVariantMap request;
+    request["type"] = MessagePrivatePending;
+    Engine::write(request);
+}
+
 void MainPage::refreshUserView()
 {
     SharedData &sharedData = SharedData::instance();
@@ -129,7 +136,6 @@ void MainPage::onEngineGotData(const QVariantMap &data)
         QVariantList seksiList = data["seksiList"].toList();
         QVariantList jabatanList = data["jabatanList"].toList();
         QVariantList userList = data["userList"].toList();
-        QVariantList chatList = data["chatList"].toList();
 
         sharedData.seksiMap.clear();
         foreach (const QVariant &seksi, seksiList) {
@@ -159,16 +165,6 @@ void MainPage::onEngineGotData(const QVariantMap &data)
         }
 
         refreshUserView();
-
-        foreach (const QVariant &chat, chatList) {
-            QString from = chat.toString();
-
-            ChatWidget *chatWidget = ChatWidget::getChatWidget(from);
-            if (!chatWidget)
-                chatWidget = ChatWidget::createChatWidget(from);
-            chatWidget->requestChatPending();
-            chatWidget->show();
-        }
     }
     else if (type == MessageStatus) {
         QString username = data["username"].toString();
@@ -183,18 +179,34 @@ void MainPage::onEngineGotData(const QVariantMap &data)
         QString from = data["from"].toString();
         QString to = data["to"].toString();
 
+        ChatItemType chatType(ChatItemUnknown);
         QString username;
-        if (from == SharedData::instance().username)
+        if (from == SharedData::instance().username) {
             username = to;
+            chatType = ChatItemMe;
+        }
 
-        if (to == SharedData::instance().username)
+        if (to == SharedData::instance().username) {
             username = from;
+            chatType = ChatItemYou;
+        }
 
         ChatWidget *chatWidget = ChatWidget::getChatWidget(username);
         if (!chatWidget) {
             chatWidget = ChatWidget::createChatWidget(username);
-            chatWidget->requestChatPending();
             chatWidget->show();
+        }
+    }
+    else if (type == MessagePrivatePending) {
+        QStringList chatList = data["chatList"].toStringList();
+        foreach (const QString &from, chatList) {
+            ChatWidget *chatWidget = ChatWidget::getChatWidget(from);
+            if (!chatWidget) {
+                chatWidget = ChatWidget::createChatWidget(from);
+                chatWidget->show();
+            }
+            else
+                chatWidget->activateWindow();
         }
     }
 }
@@ -206,7 +218,10 @@ void MainPage::onUserItemActivated(const QModelIndex &index)
 
     QString username = index.data(UserItemUsernameRole).toString();
     ChatWidget *chatWidget = ChatWidget::getChatWidget(username);
-    if (!chatWidget)
+    if (!chatWidget) {
         chatWidget = ChatWidget::createChatWidget(username);
-    chatWidget->show();
+        chatWidget->show();
+    }
+    else
+        chatWidget->activateWindow();
 }

@@ -14,6 +14,7 @@ public:
     explicit MainPage(QWidget *parent = nullptr);
 
     void loadData();
+    void loadPendingChat();
     void refreshUserView();
 
 private slots:

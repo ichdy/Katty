@@ -76,13 +76,13 @@ void MainWindow::onEngineGotData(const QVariantMap &data)
 {
     int type = data["type"].toInt();
     if (type == MessageLogin) {
-        bool result = data["result"].toBool();
-        if (result) {
+        if (data["online"].toBool()) {
             QString username = data["username"].toString();
+            SharedData::instance().username = username;
 
             mStack->setCurrentWidget(mMainPage);
             mMainPage->loadData();
-            SharedData::instance().username = username;
+            mMainPage->loadPendingChat();
         }
     }
     else if (type == MessageLogout) {

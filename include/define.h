@@ -45,15 +45,18 @@ enum UserItemType {
 
 enum ChatItemRole {
     ChatItemTypeRole = Qt::UserRole + 1,
+    ChatItemIdRole,
     ChatItemNameRole,
-    ChatItemTimeRole
+    ChatItemTimeRole,
+    ChatItemStatusRole
 };
 
 enum ChatItemType {
     ChatItemUnknown = 0,
     ChatItemMe,
     ChatItemYou,
-    ChatItemDate
+    ChatItemDate,
+    ChatItemNew
 };
 
 #endif

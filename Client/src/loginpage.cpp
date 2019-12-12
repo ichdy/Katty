@@ -157,23 +157,14 @@ void LoginPage::onEngineGotData(const QVariantMap &data)
     int type = data["type"].toInt();
     if (type == MessageLogin) {
         int method = data["method"].toInt();
-        if (method == LoginUser) {
-            bool result = data["result"].toBool();
-            if (!result) {
-                enableForm(true);
-                clearForm();
-            }
-        }
-        else {
-            bool result = data["result"].toBool();
-            if (!result) {
+        if (!data["online"].toBool()) {
+            if (method == LoginPassword)
                 QMessageBox::warning(this, "Login", "Username atau Password tidak sesuai!");
-                enableForm(true);
-                clearForm();
-            }
+
+            enableForm(true);
+            clearForm();
         }
     }
-    else if (type == MessageLogout) {
+    else if (type == MessageLogout)
         enableForm(true);
-    }
 }

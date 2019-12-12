@@ -19,6 +19,8 @@ ChatItemDelegate::ChatItemDelegate(QObject *parent) :
 
     mDateFont.setBold(true);
 
+    mNewFont.setItalic(true);
+
     mNameFont.setFamily("Arial");
     mNameFont.setPixelSize(10);
     mNameFont.setBold(true);
@@ -27,6 +29,7 @@ ChatItemDelegate::ChatItemDelegate(QObject *parent) :
     mMessageFont.setPixelSize(12);
 
     mTimeFont.setPixelSize(9);
+
 }
 
 void ChatItemDelegate::setMessageFontPixelSize(int size)
@@ -42,6 +45,9 @@ QSize ChatItemDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
     ChatItemType type = static_cast<ChatItemType>(index.data(ChatItemTypeRole).toInt());
 
     if (type == ChatItemDate) {
+        return QSize(width, (mMarginY * 2) + 24);
+    }
+    else if (type == ChatItemNew) {
         return QSize(width, (mMarginY * 2) + 24);
     }
     else {
@@ -102,6 +108,18 @@ void ChatItemDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
         painter->setPen(QColor("#DDD"));
         painter->drawLine(mMarginX + (lineWidth * 0.5), y + 24, mMarginX + (lineWidth * 1.5), y + 24);
+        painter->restore();
+    }
+    else if (type == ChatItemNew) {
+        int availWidth = width - (mPadding * 2);
+        int newFlags = Qt::TextSingleLine | Qt::AlignCenter;
+
+        QString text = index.data(Qt::DisplayRole).toString();
+
+        painter->save();
+        painter->setPen(QColor("#555"));
+        painter->setFont(mNewFont);
+        painter->drawText(mMarginX, y, availWidth, 24, newFlags, text.toLower());
         painter->restore();
     }
     else {

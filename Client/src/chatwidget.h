@@ -6,6 +6,7 @@
 
 class QListView;
 class QLabel;
+class QStandardItem;
 class ChatView;
 class ChatItemDelegate;
 class ChatEdit;
@@ -15,33 +16,34 @@ class ChatWidget : public QWidget
 public:
     ~ChatWidget();
 
-    void requestChatHistory();
-    void requestChatPending();
+    void appendMessage(ChatItemType type, int id, const QString &message, const QDateTime &time, bool isNew);
 
     static ChatWidget *getChatWidget(const QString &username);
     static ChatWidget *createChatWidget(const QString &username);
     static void closeChatWidgets();
 
+protected:
+    bool event(QEvent *event);
+
 private slots:
     void sendMessage();
     void sendFile();
+    void removeNewMessageItem();
 
     void onEngineGotData(const QVariantMap &data);
 
 private:
     explicit ChatWidget(const QString &username, QWidget *parent = 0);
-    void appendMessage(ChatItemType type, const QString &message, const QDateTime &time);
+    void requestChatHistory();
 
     ChatView *mChatView;
     ChatItemDelegate *mChatDelegate;
     QLabel *mOfflineLabel;
     ChatEdit *mChatEdit;
+    QStandardItem *mNewMessageItem;
 
     QString mUsername;
     QString mNama;
-
-    bool mRequestHistory;
-    bool mRequestPending;
 
     static QHash<QString, ChatWidget *> mChatWidgetHash;
 };

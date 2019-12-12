@@ -1,5 +1,6 @@
 #include "chatwidget.h"
 
+#include <QEvent>
 #include <QVBoxLayout>
 #include <QTextEdit>
 #include <QSplitter>
@@ -23,9 +24,8 @@ QHash<QString, ChatWidget *> ChatWidget::mChatWidgetHash;
 
 ChatWidget::ChatWidget(const QString &username, QWidget *parent) :
     QWidget(parent),
-    mUsername(username),
-    mRequestHistory(false),
-    mRequestPending(false)
+    mNewMessageItem(nullptr),
+    mUsername(username)
 {   
     QSplitter *splitter = new QSplitter;
     splitter->setOrientation(Qt::Vertical);
@@ -41,11 +41,6 @@ ChatWidget::ChatWidget(const QString &username, QWidget *parent) :
 
     QStandardItemModel *model = new QStandardItemModel(mChatView);
     mChatView->setModel(model);
-
-    // Test
-    // appendMessage(ChatItemTypeYou, "Probably cats prefer to talk face to face, like this. But for those times when you're far from your chat cat.");
-    // appendMessage(ChatItemTypeMe, "The most obvious and common way cats show their happiness and love is through purring. Cats seem to have a special little motor inside them that get started when they are relaxed and enjoying something. You’ll often hear this rumbling, vibrating noise while you are petting your cat. Purrs can also mean your cat is upset but it's not as common.");
-    // appendMessage(ChatItemTypeYou, "Children tend to throw themselves on the ground and roll around during a tantrum, but when your cat does it, it means they are excited to see you. Cats may walk or run up to you and throw themselves on the ground and begin to roll around. This is a loving greeting and means they want your attention, especially if they show you their belly.");
 
     QList<int> sizes;
     sizes << 300;
@@ -100,6 +95,13 @@ ChatWidget::~ChatWidget()
     mChatWidgetHash.remove(mUsername);
 }
 
+bool ChatWidget::event(QEvent *event)
+{
+    if (event->type() == QEvent::WindowActivate)
+        QTimer::singleShot(5000, this, &ChatWidget::removeNewMessageItem);
+    return QWidget::event(event);
+}
+
 ChatWidget *ChatWidget::getChatWidget(const QString &username)
 {
     return mChatWidgetHash[username];
@@ -125,7 +127,18 @@ void ChatWidget::closeChatWidgets()
     }
 }
 
-void ChatWidget::appendMessage(ChatItemType type, const QString &message, const QDateTime &time)
+void ChatWidget::removeNewMessageItem()
+{
+    if (!mNewMessageItem)
+        return;
+
+    QStandardItemModel *model = static_cast<QStandardItemModel *>(mChatView->model());
+    model->removeRow(mNewMessageItem->row());
+
+    mNewMessageItem = nullptr;
+}
+
+void ChatWidget::appendMessage(ChatItemType type, int id, const QString &message, const QDateTime &time, bool isNew)
 {
     QStandardItemModel *model = static_cast<QStandardItemModel *>(mChatView->model());
 
@@ -149,13 +162,21 @@ void ChatWidget::appendMessage(ChatItemType type, const QString &message, const 
         model->appendRow(item);
     }
 
+    if (type == ChatItemYou && isNew && !mNewMessageItem) {
+        mNewMessageItem = new QStandardItem("new message(s)");
+        mNewMessageItem->setData(ChatItemNew, ChatItemTypeRole);
+        model->appendRow(mNewMessageItem);
+    }
+
     SharedData &sharedData = SharedData::instance();
 
     QStandardItem *item = new QStandardItem;
     item->setData(type, ChatItemTypeRole);
+    item->setData(id, ChatItemIdRole);
     item->setData(sharedData.userMap[type == ChatItemMe? sharedData.username : mUsername].nama, ChatItemNameRole);
     item->setData(message, Qt::DisplayRole);
     item->setData(time, ChatItemTimeRole);
+    item->setData(isNew, ChatItemStatusRole);
     model->appendRow(item);
 
     mChatView->scrollToBottom();
@@ -163,26 +184,10 @@ void ChatWidget::appendMessage(ChatItemType type, const QString &message, const 
 
 void ChatWidget::requestChatHistory()
 {
-    mRequestHistory = true;
-
     QVariantMap request;
     request["type"] = MessagePrivateHistory;
     request["to"] = mUsername;
-
     Engine::write(request);
-}
-
-void ChatWidget::requestChatPending()
-{
-    if (mRequestHistory)
-        mRequestPending = true;
-    else {
-        QVariantMap request;
-        request["type"] = MessagePrivatePending;
-        request["from"] = mUsername;
-
-        Engine::write(request);
-    }
 }
 
 void ChatWidget::sendMessage()
@@ -197,7 +202,6 @@ void ChatWidget::sendMessage()
     request["type"] = MessagePrivateChat;
     request["to"] = mUsername;
     request["message"] = message;
-
     Engine::write(request);
 }
 
@@ -221,77 +225,66 @@ void ChatWidget::onEngineGotData(const QVariantMap &data)
 {
     int type = data["type"].toInt();
     if (type == MessagePrivateChat) {
+        int id = data["id"].toInt();
         QString from = data["from"].toString();
         QString to = data["to"].toString();
         QString message = data["message"].toString();
         QDateTime time = data["time"].toDateTime();
+        bool isNew = data["new"].toBool();
 
-        SharedData &sharedData = SharedData::instance();
-        if (from == sharedData.username && to == mUsername) {
-            appendMessage(ChatItemMe, message, time);
-
-            if (from == to) {
-                QVariantMap respond;
-                respond["type"] = MessagePrivateChat;
-                respond["id"] = data["id"];
-                respond["result"] = true;
-
-                Engine::write(respond);
-            }
+        ChatItemType chatType(ChatItemUnknown);
+        QString username;
+        if (to == SharedData::instance().username) {
+            username = from;
+            chatType = ChatItemYou;
         }
-        else if (from == mUsername && to == sharedData.username) {
-            appendMessage(ChatItemYou, message, time);
 
-            QVariantMap respond;
-            respond["type"] = MessagePrivateChat;
-            respond["id"] = data["id"];
-            respond["result"] = true;
-
-            Engine::write(respond);
+        if (from == SharedData::instance().username) {
+            username = to;
+            chatType = ChatItemMe;
         }
+
+        if (username != mUsername)
+            return;
+
+        appendMessage(chatType, id, message, time, isNew);
+
+        QVariantMap respond;
+        respond["type"] = MessagePrivateChatStatus;
+        respond["id"] = id;
+        respond["received"] = true;
+        Engine::write(respond);
     }
     else if (type == MessagePrivateHistory) {
         if (data["to"].toString() != mUsername)
             return;
 
-        SharedData &sharedData = SharedData::instance();
         foreach (const QVariant &chat, data["chatList"].toList()) {
             QVariantMap chatMap = chat.toMap();
+            int id = chatMap["id"].toInt();
             QString from = chatMap["from"].toString();
             QString to = chatMap["to"].toString();
             QString message = chatMap["message"].toString();
             QDateTime time = chatMap["time"].toDateTime();
+            bool isNew = chatMap["new"].toBool();
 
-            if (from == sharedData.username && to == mUsername)
-                appendMessage(ChatItemMe, message, time);
-            else if (from == mUsername && to == sharedData.username)
-                appendMessage(ChatItemYou, message, time);
+            ChatItemType chatType(ChatItemUnknown);
+            if (to == SharedData::instance().username)
+                chatType = ChatItemYou;
+
+            if (from == SharedData::instance().username)
+                chatType = ChatItemMe;
+
+            appendMessage(chatType, id, message, time, isNew);
+
+            if (isNew) {
+                QVariantMap respond;
+                respond["type"] = MessagePrivateChatStatus;
+                respond["id"] = id;
+                respond["received"] = true;
+                Engine::write(respond);
+            }
         }
-
-        mRequestHistory = false;
-        if (mRequestPending)
-            requestChatPending();
-    }
-    else if (type == MessagePrivatePending) {
-        if (data["from"].toString() != mUsername)
-            return;
-
-        foreach (const QVariant &chat, data["chatList"].toList()) {
-            QVariantMap chatMap = chat.toMap();
-            QString message = chatMap["message"].toString();
-            QDateTime time = chatMap["time"].toDateTime();
-
-            appendMessage(ChatItemYou, message, time);
-
-            QVariantMap respond;
-            respond["type"] = MessagePrivateChat;
-            respond["id"] = chatMap["id"];
-            respond["result"] = true;
-
-            Engine::write(respond);
-        }
-
-        mRequestPending = false;
     }
     else if (type == MessageStatus) {
         QString username = data["username"].toString();
