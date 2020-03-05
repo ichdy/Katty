@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QDateTime>
+#include <QScopedPointer>
 
 #include "client.h"
 

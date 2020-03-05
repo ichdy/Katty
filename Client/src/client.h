@@ -2,9 +2,10 @@
 #define CLIENT_H
 
 #include <QObject>
-#include <QSharedPointer>
+#include <QScopedPointer>
 #include <QTimer>
 #include <QImage>
+#include <QWebSocket>
 
 class QWebSocket;
 class Client : public QObject

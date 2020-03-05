@@ -1,12 +1,13 @@
 #ifndef MAINPAGE_H
 #define MAINPAGE_H
 
+#include <QHash>
+#include <QListView>
+#include <QStandardItem>
+#include <QTabWidget>
+#include <QTreeView>
 #include <QWidget>
 
-class QTabWidget;
-class QListView;
-class QTreeView;
-class QStandardItem;
 class MainPage : public QWidget
 {
     Q_OBJECT
