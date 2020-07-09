@@ -61,7 +61,7 @@ ChatWidget::ChatWidget(const QString &username, QWidget *parent) :
     QVBoxLayout *topLayout = new QVBoxLayout;
     topLayout->addWidget(mChatView);
     topLayout->addWidget(mOfflineLabel);
-    topLayout->setMargin(0);
+    topLayout->setContentsMargins(0, 0, 0, 0);
     topLayout->setSpacing(0);
 
     QWidget *widget = new QWidget;
@@ -74,7 +74,7 @@ ChatWidget::ChatWidget(const QString &username, QWidget *parent) :
 
     QVBoxLayout *layout = new QVBoxLayout;
     layout->addWidget(splitter);
-    layout->setMargin(3);
+    layout->setContentsMargins(3, 3, 3, 3);
 
     SharedData &sharedData = SharedData::instance();
     mNama = sharedData.userMap[mUsername].nama;
